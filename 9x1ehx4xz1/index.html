@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer"><title>Preview</title>
+<style>html,body{margin:0;height:100%;background:#1b1c1f;color:#9a9ea8;font:14px system-ui,"Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center;text-align:center;padding:0 16px;box-sizing:border-box}</style>
+</head><body><div id="m">Loading preview...</div><script>
+(async () => {
+  const m = document.getElementById('m');
+  const k = new URLSearchParams(location.hash.slice(1)).get('k');
+  if (!k) { m.textContent = 'This preview can only be opened with its full link (including the part after #).'; return; }
+  try {
+    const raw = Uint8Array.from(atob(k.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    const res = await fetch('data.bin', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.subarray(0, 12) }, key, buf.subarray(12));
+    const html = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('deflate'))).text();
+    document.open(); document.write(html); document.close();
+  } catch (e) {
+    m.textContent = 'This preview could not be opened: the link is incomplete or out of date.';
+  }
+})();
+</script></body></html>
